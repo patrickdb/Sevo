@@ -10,8 +10,12 @@
  */
 public class VolumeTests {
 	
+	/**
+	 * Sloc
+	 */
 	public void SLOC_4()
 	{
+		// This is some extra comment
 		String s = new String();
 		for (int i=0; i<10; ++i)
 		{
