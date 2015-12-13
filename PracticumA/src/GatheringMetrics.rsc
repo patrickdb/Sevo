@@ -6,6 +6,7 @@ import IO;
 // Own defined module
 import MetricsGrading;
 import MetricsMeasurement;
+import MetricsDuplication;
 
 public JavaFileMetrics GatherFileStatistics(JavaFileMetrics fInfo)
 {	
@@ -30,7 +31,12 @@ public JavaFileMetrics GatherMethodStatistics(JavaFileMetrics fInfo, loc project
 
 public void main()
 {	
-	projectName = |project://Jabberpoint/|;
+	//projectName = |project://smallsql/|;
+	//projectName = |project://Jabberpoint/|;
+	//projectName = |project://TestCode/|;
+	projectName = |project://hsqldb/|;
+	
+	println("Gathering project statistics...");
 	
 	set[loc] files = getListOfJavaUnits(projectName);
 	
@@ -47,47 +53,27 @@ public void main()
 	
 	// Built up method statistics like SLOC and complexity
 	JavaFileMetrics methodStatistics = info(|project://./|,0,0,0,0,[]);
-	methodStatistics = GatherMethodStatistics(methodStatistics, projectName);
 	
-	int projectTotalLinesOfCode = 0;
-	int projectLinesOfCode = 0;
-	int projectLinesOfComment = 0;
-	int projectLinesOfEmpty = 0;
+	println("Gathering method statistics...");
+	methodStatistics 		= GatherMethodStatistics(methodStatistics, projectName);
 	
-	// Print info from each java file in the project
-	for(JavaFileMetrics infoBlock<-projectInfo)
-	{
-		//println(infoBlock.projectLocation.file);
-		//println("Number of lines in file: <infoBlock.totalLines>");
-		//println("Number of empty lines in file: <infoBlock.emptyLines>");
-		//println("Number of comment lines in file: <infoBlock.linesOfComments>");
-		//println("Number of code lines in file: <infoBlock.linesOfCode>");
-		//println("");
-		
-		projectTotalLinesOfCode = projectTotalLinesOfCode + infoBlock.totalLines;
-		projectLinesOfCode = projectLinesOfCode + infoBlock.linesOfCode;
-		projectLinesOfComment = projectLinesOfComment + infoBlock.linesOfComments;
-		projectLinesOfEmpty = projectLinesOfEmpty + infoBlock.emptyLines;
-	}
+	println("Calculating total number of lines in project...");	
+	projectLinesOfCode 		= CalculateProjectLinesOfCode(projectInfo);
 	
-	println("Total number of  lines in project: <projectTotalLinesOfCode>");
-	println("Total number of code lines in project: <projectLinesOfCode>");
-	println("Total number of comment lines in project: <projectLinesOfComment>");
-	println("Total number of empty lines in project: <projectLinesOfEmpty>");
-	println("Sum of comments+code+empty = equal? <projectLinesOfCode+projectLinesOfComment+projectLinesOfEmpty>");
-	
-	percentageDuplicated = MeasureDuplicationOfCode(projectName);
+	println("Calculating percentage of duplication in project...");	
+	percentageDuplicated 	= MeasureDuplicationOfCode(projectName);	
 	
 	gradeVolume 		= GradeProjectVolume(projectLinesOfCode);
-	gradeComplexity 	= GradeProjectComplexityDistribution(methodStatistics);
+	gradeComplexity 	= GradeProjectComplexityDistribution(methodStatistics, projectLinesOfCode);
 	gradeDuplication	= GradeProjectDuplication(percentageDuplicated);
+	gradeMethodSize		= GradeProjectMethodSizeDistribution(methodStatistics, projectLinesOfCode);
 	
-	gradeProject 	= GradeProjectOverall(gradeVolume, gradeComplexity, 1, 1);
+	gradeProject 	= GradeProjectOverall(gradeVolume, gradeComplexity, gradeDuplication, gradeMethodSize);
 	
-	println("Grade for project complexity: <gradeComplexity>");
-	println("Grade for project size: <gradeVolume>");
-	println("Grade for overal method size: ");
-	println("Grade for code duplication: <gradeDuplication>");
+	println("Grade for project complexity: <gradeComplexity>*");
+	println("Grade for project size of <projectLinesOfCode> SLOC: <gradeVolume>*");
+	println("Grade for project overal method size: <gradeMethodSize>*");
+	println("Grade for code duplication of <percentageDuplicated>%: <gradeDuplication>*");
 	println;
-	println("Project grade: <gradeProject>");
+	println("Overal project grade: <gradeProject>*");
 }

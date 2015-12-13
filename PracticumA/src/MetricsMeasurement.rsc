@@ -95,6 +95,31 @@ public int countLinesOfCommentsInJavaUnit(loc fileName)
 	return determineNumberOfLinesInDocumentationSet(documentationSet);
 }
 
+public int CalculateProjectLinesOfCode(set[JavaFileMetrics] projectInfo)
+{
+	int projectTotalLinesOfCode = 0;
+	int projectLinesOfCode = 0;
+	int projectLinesOfComment = 0;
+	int projectLinesOfEmpty = 0;
+	
+	// Print info from each java file in the project
+	for(JavaFileMetrics infoBlock<-projectInfo)
+	{
+		projectTotalLinesOfCode = projectTotalLinesOfCode + infoBlock.totalLines;
+		projectLinesOfCode = projectLinesOfCode + infoBlock.linesOfCode;
+		projectLinesOfComment = projectLinesOfComment + infoBlock.linesOfComments;
+		projectLinesOfEmpty = projectLinesOfEmpty + infoBlock.emptyLines;
+	}
+	
+	//println("Total number of  lines in project: <projectTotalLinesOfCode>");
+	//println("Total number of code lines in project: <projectLinesOfCode>");
+	//println("Total number of comment lines in project: <projectLinesOfComment>");
+	//println("Total number of empty lines in project: <projectLinesOfEmpty>");
+	//println("Sum of comments+code+empty = equal? <projectLinesOfCode+projectLinesOfComment+projectLinesOfEmpty>");
+	//
+	return projectLinesOfCode;
+}
+
 // Built up metrics per method in the project. This is including constructors
 // - Total lines of code per method
 // - Complexity per method
@@ -140,8 +165,7 @@ public JavaFileMetrics DetermineMethodMetrics(JavaFileMetrics metrics, loc proje
 		MethodLinesOfCode = totalLines - emptyLinesTotal - commentLinesTotal;
 		cyclicComplexity = nrOfPredicates + 1;
 		
-		metrics.methods = metrics.methods + mm(meth.methodname, MethodLinesOfCode, cyclicComplexity);
-		
+		metrics.methods = metrics.methods + mm(meth.methodname, MethodLinesOfCode, cyclicComplexity);		
 	}		
 	
 	println("Max complexity encountered = <maxNrOfPredicates>");

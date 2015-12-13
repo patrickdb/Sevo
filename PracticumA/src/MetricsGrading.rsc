@@ -38,7 +38,7 @@ map[int, real] projectSize = (
 );
 
 // Duplicate code lines in percentage of total amount of code lines of project
-map[int, real] codeDuplication = (
+public map[int, real] codeDuplication = (
 2:0.20,
 3:0.10,
 4:0.05,
@@ -63,7 +63,7 @@ list[categories]  classBoundaries = [
 	cls(0.0,0.0,0.0)
 ];
 
-categories CalculateCCPercentagePerCategory(JavaFileMetrics info)
+categories CalculateCCPercentagePerCategory(JavaFileMetrics info, int SLOCProject)
 {
 	perCategory = cls(0.0,0.0,0.0);
 	
@@ -72,9 +72,6 @@ categories CalculateCCPercentagePerCategory(JavaFileMetrics info)
 	real moderateRisk = 0.0;
 	real highRisk = 0.0;
 	real veryHighRisk = 0.0;
-	
-	// Total sum of method lines
-	int SLOCmethodsOnly = 0;
 	
 	// Count total number of lines that occur in methods with a certain complexity 
 	for(methodMetrics i<-info.methods)
@@ -87,19 +84,58 @@ categories CalculateCCPercentagePerCategory(JavaFileMetrics info)
 			moderateRisk += i.methodSLOC;
 		else
 			noRisk += i.methodSLOC;
-			
-		SLOCmethodsOnly += i.methodSLOC;
 	}
 	
 	// Determine percentages based on total number of code in project
-	if (SLOCmethodsOnly>0)
+	if (SLOCProject>0)
 	{
-		perCategory.moderate = moderateRisk / SLOCmethodsOnly;
-		perCategory.high     = highRisk / SLOCmethodsOnly;
-		perCategory.veryHigh = veryHighRisk / SLOCmethodsOnly;		
+		perCategory.moderate = moderateRisk / SLOCProject;
+		perCategory.high     = highRisk / SLOCProject;
+		perCategory.veryHigh = veryHighRisk / SLOCProject;		
 	}
 	
-	println("<noRisk>:<moderateRisk>:<highRisk>:<veryHighRisk>");	
+	println("CC Distribution over <SLOCProject> SLOC results in: [<noRisk>:<moderateRisk>:<highRisk>:<veryHighRisk>]");	
+	
+	return perCategory;
+}
+
+categories CalculateMethodSizePercentagePerCategory(JavaFileMetrics info, int SLOCProject)
+{
+	perCategory = cls(0.0,0.0,0.0);
+	
+	// Cyclic complexity classes to be identified
+	real noRisk = 0.0;
+	real moderateRisk = 0.0;
+	real highRisk = 0.0;
+	real veryHighRisk = 0.0;
+	
+	int totalMethodLines = 0;
+	
+	// Count total number of lines that occur in methods with a certain complexity 
+	for(methodMetrics i<-info.methods)
+	{
+		if(i.methodComplexity > 35)
+			veryHighRisk += i.methodSLOC;				
+		else if (i.methodComplexity > 20)
+			highRisk += i.methodSLOC;
+		else if (i.methodComplexity > 9)
+			moderateRisk += i.methodSLOC;
+		else
+			noRisk += i.methodSLOC;
+			
+		totalMethodLines += i.methodSLOC;
+	}
+	
+	// Determine percentages based on total number of code in project
+	if (SLOCProject>0)
+	{
+		perCategory.moderate = moderateRisk / SLOCProject;
+		perCategory.high     = highRisk / SLOCProject;
+		perCategory.veryHigh = veryHighRisk / SLOCProject;		
+	}
+	
+	println("Method Size Distribution over <SLOCProject> SLOC results in: [<noRisk>:<moderateRisk>:<highRisk>:<veryHighRisk>]");
+	println("Number of lines in methods: <totalMethodLines>");	
 	
 	return perCategory;
 }
@@ -146,22 +182,24 @@ int GradeCategory(categories perc)
 }
 
 // Calculate the cyclic complexity per category project wide and return the SIG grading mark for the score
-public int GradeProjectComplexityDistribution(JavaFileMetrics metrics)
+public int GradeProjectComplexityDistribution(JavaFileMetrics metrics, int slocProject)
 {
-	percentagePerCategory = CalculateCCPercentagePerCategory(metrics);
+	percentagePerCategory = CalculateCCPercentagePerCategory(metrics, slocProject);
 	grade = GradeCategory(percentagePerCategory);
 	
 	return grade;
 }
 
-public int GradeProjectDuplication(JavaFileMetrics metrics)
+public int GradeProjectDuplication(real percentageOfDuplication)
 {
-	return 1;
+	return SingleValueGrading(percentageOfDuplication, codeDuplication);
 }
 
-public int GradeProjectMethodSizeDistribution(JavaFileMetrics metrics)
+public int GradeProjectMethodSizeDistribution(JavaFileMetrics metrics, int slocProject)
 {
-	return 1;
+	percentagePerCategory = CalculateMethodSizePercentagePerCategory(metrics, slocProject);
+	grade = grade = GradeCategory(percentagePerCategory);
+	return grade;
 }
 
 public real GradeProjectOverall(int volume, int complexity, int duplication, int methodSize)

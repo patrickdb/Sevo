@@ -134,12 +134,10 @@ public real MeasureDuplicationOfCode(loc projectName)
 	splitted = MarkDuplicateLines(splitted, 6);	
 	
 	endTime = now();
-	println("totaltime: <endTime-startTime>");
+	println("It took the following amount of time to calculate duplication: <endTime-startTime>");
 
 	// Determine percentage of code which is duplicated
 	percentageDuplicatedCode = CalculateDuplicationOfCode(splitted);
-		
-	println("<percentageDuplicatedCode>% duplication"); 
 	
 	return percentageDuplicatedCode;
 }
