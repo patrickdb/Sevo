@@ -1,0 +1,17 @@
+// Full duplciation 1 line
+Line 1
+Line 1
+
+
+
+
+Line 1
+Line 1
+		Line 1
+Line 1
+Line 1
+		Line 1
+		Line 1
+Line 1
+Line 1
+Line 1

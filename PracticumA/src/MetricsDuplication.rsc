@@ -1,4 +1,4 @@
-module DuplicationExperiment
+module MetricsDuplication
 
 import lang::java::jdt::m3::Core;
 import util::Resources;
@@ -16,7 +16,7 @@ data SplittedLine = line(str codeLine, bool duplicate);
 //
 // The list returned has an additonal flag per line, which is used later on to mark
 // a line duplicate
-public list[SplittedLine] SplitContentAndRemoveTrailingSpacesAndEmptyLines(str fileContents)
+list[SplittedLine] SplitContentAndRemoveTrailingSpacesAndEmptyLines(str fileContents)
 {	
 	return [line(trim(codeLine),false) | codeLine<-split("\n",fileContents), (!isEmpty(trim(codeLine))&& !(/[\/*].*/ := trim(codeLine)))];
 }
@@ -24,7 +24,7 @@ public list[SplittedLine] SplitContentAndRemoveTrailingSpacesAndEmptyLines(str f
 // Merge the splitted lines into one liners that
 // contain the number of lines as given by chunkSize
 // This will reduce the number of comparisons needed for all text
-public list[str] MergeNLinesTo1Line(splitted, chunkSize, totalLines, startLine)
+list[str] MergeNLinesTo1Line(splitted, chunkSize, totalLines, startLine)
 {	
 	list[str] mergedLines = [];
 	int n = startLine;
@@ -35,7 +35,7 @@ public list[str] MergeNLinesTo1Line(splitted, chunkSize, totalLines, startLine)
 		str mergedLine = "";
 		
 		//	If all lines merged for this chunk are already marked duplicate
-		// we add an empty line, signalling to the check for duplication this  line can be skipped
+		// we add an empty line, acting as signal that the check for duplication for this line can be skipped
 		for (i <- [0..chunkSize])
 			allLinesDuplicate = allLinesDuplicate && splitted[n+i].duplicated;
 		
@@ -53,7 +53,7 @@ public list[str] MergeNLinesTo1Line(splitted, chunkSize, totalLines, startLine)
 	return mergedLines;
 }
 
-public list[SplittedLine] MarkDuplicateLines(splitted, chunkSize)
+list[SplittedLine] MarkDuplicateLines(splitted, chunkSize)
 {
 	int blockProcessingLine = 0;
 	
@@ -64,13 +64,10 @@ public list[SplittedLine] MarkDuplicateLines(splitted, chunkSize)
 	{	
 		// Merge n lines (identified by chunkSize together in 1 line, to reduce number of comparisons needed
 		// The window of comparison is shifted one line by one line through the file
-		mergedItems = MergeNLinesTo1Line(splitted, chunkSize, totalLines, blockProcessingLine);
-		//println("<blockProcessingLine>:<size(mergedItems)>");
+		mergedItems = MergeNLinesTo1Line(splitted, chunkSize, totalLines, blockProcessingLine);		
 
 		int idxMergedItems = 1;		
 		str stringToProcess = mergedItems[0];
-		
-		//println(mergedItems);
 					
 		while ( (idxMergedItems <= (size(mergedItems)-1)) )
 		{	
@@ -78,10 +75,7 @@ public list[SplittedLine] MarkDuplicateLines(splitted, chunkSize)
 			// and do not need additional comparison (we already now it is duplicate)
 			// If string is not empty, compare if there is a duplicate line here
 			if(!isEmpty(stringToProcess) && (stringToProcess==mergedItems[idxMergedItems]))
-			{
-				println("<blockProcessingLine>:<size(mergedItems)>");
-				
-				//println("Duplicate Found @ index: <idxMergedItems>, <stringToProcess>, <blockProcessingLine>, <chunkSize>");					
+			{						
 				for(i <- [0..chunkSize])
 				{	
 					splitted[blockProcessingLine + (chunkSize*idxMergedItems) + i].duplicate 	= true;			
@@ -90,17 +84,15 @@ public list[SplittedLine] MarkDuplicateLines(splitted, chunkSize)
 			}	
 					
 			idxMergedItems = idxMergedItems + 1;
-		}
-			
+		}			
 		 
-		blockProcessingLine = blockProcessingLine + 1;	
-		//println(splitted);
+		blockProcessingLine = blockProcessingLine + 1;		
 	}
 	
 	return splitted;
 }
 
-public real CalculateDuplicationOfCode(LinesMarkedDuplicate)
+real CalculateDuplicationOfCode(list[SplittedLine] LinesMarkedDuplicate)
 {	
 	nrOfDuplicatedLines = 0.0;
 	
@@ -113,40 +105,41 @@ public real CalculateDuplicationOfCode(LinesMarkedDuplicate)
 	return (nrOfDuplicatedLines / totalLines) * 100.0;
 }
 
-public void main_()
-{	
-	//str fileContents = readFile(|project://PracticumA/FullDuplicationMutliLine.txt|);
-	//str fileContents = readFile(|project://PracticumA/FullDuplicationSingleChar.txt|);
-	//str fileContents = readFile(|project://PracticumA/MultiLineDuplicationExceedsChunkSize.txt|);			
-	//str fileContents = readFile(|project://PracticumA/DuplicationSmallerThanChunkSize.txt|);
-	
+str AllJavaFilesInOneChunk(loc projectName)
+{
 	str fileContents = "";
-	Resource project = getProject(|project://smallsql|);
-	listOfJavaFiles =[ item | /file(item) <- project, item.extension == "java"];
+		
+	Resource project = getProject(projectName);
+	listOfJavaFiles = [ item | /file(item) <- project, item.extension == "java"];
 	
 	for (filename <- listOfJavaFiles)
 	{
 		fileContents = fileContents + readFile(filename);
 	}
 	
-	//println(fileContents);	  
+	return fileContents;	
+}
+
+public real MeasureDuplicationOfCode(loc projectName)
+{	
+	str fileContents = AllJavaFilesInOneChunk(projectName);
 	
 	// Empty lines and spaces are not taken into account while looking for duplication
 	splitted = SplitContentAndRemoveTrailingSpacesAndEmptyLines(fileContents);	
-		
-	//println(splitted);
-	//println(size(splitted));
 	
 	startTime=now();	
 	
-	// Find and mark duplicate lines 
+	// Find and mark those lines which are duplicated 
 	// number is chunk size
 	splitted = MarkDuplicateLines(splitted, 6);	
 	
 	endTime = now();
 	println("totaltime: <endTime-startTime>");
 
+	// Determine percentage of code which is duplicated
 	percentageDuplicatedCode = CalculateDuplicationOfCode(splitted);
 		
 	println("<percentageDuplicatedCode>% duplication"); 
+	
+	return percentageDuplicatedCode;
 }

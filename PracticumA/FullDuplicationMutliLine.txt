@@ -1,0 +1,11 @@
+// 100% Duplication by multi lines fitting chunk size of 3
+Lijn 1
+
+Lijn 2
+Lijn 3
+Lijn 1
+  Lijn 2
+Lijn 3
+		Lijn 1
+Lijn 2
+Lijn 3
