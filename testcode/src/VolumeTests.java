@@ -27,7 +27,7 @@ public class VolumeTests {
 	
 	public void SLOC_2()
 	{
-		int t=0;
+		int t=0; //test
 		t=t+1;
 	}
 };

@@ -52,7 +52,7 @@ public void CountMethodsPerClass(M3 model)
 
 public void main()
 {	
-	Resource jabber = getProject(|project://Jabberpoint|);
+	Resource jabber = getProject(|project://Jabberpoint/|);
 	
 	// Get a list with all javafiles from project
 	javafiles = RetrieveJavaFilesFromProject(jabber);
