@@ -52,6 +52,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Executor;
+
 import smallsql.database.language.Language;
 
 public class SSConnection implements Connection {
@@ -60,7 +62,7 @@ public class SSConnection implements Connection {
     private Database database;
     private boolean autoCommit = true;
     int isolationLevel = TRANSACTION_READ_COMMITTED; // see also getDefaultTransactionIsolation
-    private List commitPages = new ArrayList();
+    private List<TransactionStep> commitPages = new ArrayList<TransactionStep>();
     /** The time on which a transaction is starting. */
     private long transactionTime;
     private final SSDatabaseMetaData metadata;
@@ -483,5 +485,35 @@ public class SSConnection implements Connection {
 			throws SQLException {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public void setSchema(String schema) throws SQLException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public String getSchema() throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void abort(Executor executor) throws SQLException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public int getNetworkTimeout() throws SQLException {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 }

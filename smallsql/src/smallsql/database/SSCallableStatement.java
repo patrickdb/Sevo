@@ -777,4 +777,28 @@ public class SSCallableStatement extends SSPreparedStatement implements Callable
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public void closeOnCompletion() throws SQLException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean isCloseOnCompletion() throws SQLException {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public <T> T getObject(int parameterIndex, Class<T> type) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> T getObject(String parameterName, Class<T> type) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
