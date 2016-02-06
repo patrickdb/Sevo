@@ -17,20 +17,43 @@ import IO;
 import util::Math;
 
 // Define own data type to gather java project metrics
-public data methodMetrics = mm(loc methodName, int methodSLOC, int methodComplexity);
+// methodName 		= Name of specific method
+// methodsLOC 		= lines of code in this method
+// methodComplexity = McAbe cyclic complexity number for this method
+public data methodMetrics = _mm(loc methodName, int methodSLOC, int methodComplexity);
 
+// data structure to store rating of project
+public data projectRating = _rating(int overall, int complexity, int volume, int methodSizes, int duplication);
+
+// Structure to gather info on file level
 public data JavaFileMetrics = info(
-	loc fileName, 
+	loc fileName,	 
 	int totalLines, 
 	int emptyLines, 
 	int linesOfComments, 
 	int linesOfCode, 
 	list[methodMetrics] methods);
 	
-// Maps used to lookup quickly ranking values
+// Structure to gather info on class level
+// uri 				= loc indicating where to find this class in the project
+// className 		= Name of this class
+// totalMethods 	= Number of methods in this class, including constructors
+// classSize 		= Total LOC of all methods in class together
+// complexityRate 	= Rating for complexity according to the SIG model
+// methods 			= list of methods with some extra metrics per method
+public data classMetrics = cm(
+	loc uri,	
+	str className,
+	int totalMethods,
+	int classSize,
+	int complexityRate,
+	list[methodMetrics] methods);
+
+// Maps used to lookup quickly ranking values 
+// Maps are made publicly available so same data can be used in the visualization functionality of the metrics
 
 // Total number of code lines in project
-map[int, real] projectSize = (
+public map[int, real] projectSize = (
 2:1310000.0,
 3:665000.0,
 4:246000.0,
@@ -46,12 +69,22 @@ public map[int, real] codeDuplication = (
 );
 
 // Percentage of code NOT covered by unit tests
-map[int, real] unitTestCoverage = (
+public map[int, real] unitTestCoverage = (
 2:0.80,
 3:0.40,
 4:0.20,
 5:0.05
 );
+
+// Boundaries of cycliccomplexity
+public map[str, int] ccb = (
+"veryHigh":50,
+"High":20,
+"Medium":10,
+"low":0
+);
+
+data cc_distribution = _ccDis(int noRisk,	int moderateRisk, 	int highRisk,	int veryHighRisk); 
 
 data categories = cls(real moderate, real high, real veryHigh);
 
@@ -63,40 +96,74 @@ list[categories]  classBoundaries = [
 	cls(0.0,0.0,0.0)
 ];
 
-categories CalculateCCPercentagePerCategory(JavaFileMetrics info, int SLOCProject)
+// The LOC of the distribution datatype is converted to percentage of the total classSize
+categories RiskLOCToPercentages(cc_distribution distrLOC, int totalClassSize)
 {
 	perCategory = cls(0.0,0.0,0.0);
 	
-	// Cyclic complexity classes to be identified
-	real noRisk = 0.0;
-	real moderateRisk = 0.0;
-	real highRisk = 0.0;
-	real veryHighRisk = 0.0;
+	if (totalClassSize > 0)
+	{
+		perCategory.moderate = toReal(distrLOC.moderateRisk) / toReal(totalClassSize);
+		perCategory.high     = toReal(distrLOC.highRisk) / toReal(totalClassSize);
+		perCategory.veryHigh = toReal(distrLOC.veryHighRisk) / toReal(totalClassSize);		
+	}
+	
+	return perCategory;	
+}
+
+// Based on the complexity of a method, the loc of aspecific method is added to the distribution data type
+cc_distribution CategorizeMethodInRiskClass(methodMetrics info, cc_distribution dist)
+{	
+	if(info.methodComplexity >= ccb["veryHigh"])
+		dist.veryHighRisk += info.methodSLOC;				
+	else if (info.methodComplexity >= ccb["High"])
+		dist.highRisk += info.methodSLOC;
+	else if (info.methodComplexity >= ccb["Medium"])
+		dist.moderateRisk += info.methodSLOC;
+	else
+		dist.noRisk += info.methodSLOC;
+		
+	return dist;
+}
+
+public categories CalculateCCPercentagePerCategoryM(classMetrics cm)
+{
+	percentagePerCategory = cls(0.0,0.0,0.0);
+	
+	// Number of lines in no/medium/high/very high risk category
+	riskStatisticsLOC = _ccDis(0,0,0,0);
+	
+	for(methodInfo <- cm.methods)
+	{
+		riskStatisticsLOC = CategorizeMethodInRiskClass(methodInfo, riskStatisticsLOC);
+	}	
+	
+	println(riskStatisticsLOC);
+	
+	percentagePerCategory = RiskLOCToPercentages(riskStatisticsLOC, cm.classSize);	
+	
+	return percentagePerCategory;
+}
+
+categories CalculateCCPercentagePerCategory(JavaFileMetrics info, int SLOCProject)
+{
+	ppc = cls(0.0,0.0,0.0);
+	
+	// Number of lines in no/medium/high/very high risk category
+	rsl = _ccDis(0,0,0,0);
 	
 	// Count total number of lines that occur in methods with a certain complexity 
 	for(methodMetrics i<-info.methods)
 	{
-		if(i.methodComplexity > 50)
-			veryHighRisk += i.methodSLOC;				
-		else if (i.methodComplexity > 20)
-			highRisk += i.methodSLOC;
-		else if (i.methodComplexity > 10)
-			moderateRisk += i.methodSLOC;
-		else
-			noRisk += i.methodSLOC;
+		rsl = CategorizeMethodInRiskClass(i, rsl);
 	}
 	
 	// Determine percentages based on total number of code in project
-	if (SLOCProject>0)
-	{
-		perCategory.moderate = moderateRisk / SLOCProject;
-		perCategory.high     = highRisk / SLOCProject;
-		perCategory.veryHigh = veryHighRisk / SLOCProject;		
-	}
+	ppc = RiskLOCToPercentages(rsl, SLOCProject);	
 	
-	println("CC Distribution over <SLOCProject> SLOC results in: [<noRisk>:<moderateRisk>:<highRisk>:<veryHighRisk>]");	
+	println("CC Distribution over <SLOCProject> SLOC results in: [<rsl.noRisk>:<rsl.moderateRisk>:<rsl.highRisk>:<rsl.veryHighRisk>]");	
 	
-	return perCategory;
+	return ppc;
 }
 
 categories CalculateMethodSizePercentagePerCategory(JavaFileMetrics info, int SLOCProject)
@@ -164,7 +231,7 @@ int GradeProjectVolume(int volume)
 
 // Lookup in which row the provided percentages fit
 // The index returned is indicating SIG grade
-int GradeCategory(categories perc)
+public int GradeCategory(categories perc)
 {
 	int grade = 1;
 	
@@ -190,11 +257,13 @@ public int GradeProjectComplexityDistribution(JavaFileMetrics metrics, int slocP
 	return grade;
 }
 
+// Calculate the grade for amount of duplication in the project
 public int GradeProjectDuplication(real percentageOfDuplication)
 {
 	return SingleValueGrading(percentageOfDuplication, codeDuplication);
 }
 
+// Calculate the grade for distribution of small and large methods in project
 public int GradeProjectMethodSizeDistribution(JavaFileMetrics metrics, int slocProject)
 {
 	percentagePerCategory = CalculateMethodSizePercentagePerCategory(metrics, slocProject);

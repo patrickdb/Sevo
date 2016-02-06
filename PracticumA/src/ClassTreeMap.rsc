@@ -1,11 +1,5 @@
 module ClassTreeMap
 
-// Import necessary datatype for metrics
-import MetricsGrading;
-
-// Some general vis stuff
-import VisualAssists;
-
 import vis::Figure;
 import vis::KeySym;
 import vis::Render;
@@ -13,42 +7,73 @@ import vis::Render;
 import IO;
 import util::Math;
 
+
+// Import necessary datatype for metrics
+import MetricsGrading;
+
+// Some general vis stuff
+import VisualAssists;
+
+// Some public function to retrieve data based on user interaction with treemap
+// Get list of methods of latest selected class
+str lastClassName = "";
+list[methodMetrics] lastMethodMetrics;
+bool _updated = false;
+
+public list[methodMetrics] tmap_LastSelectedClassMethods()
+{
+	classSelected = false;
+	return lastMethodMetrics;
+}
+
+// What was the last selected class in the treemap?
+// Clients can retrieve this value 
+public str tmap_LastSelectedClassName()
+{	
+	_updated = false;	
+	
+	return lastClassName;
+}
+
+// Has the treemap been recently updated? 
+// This flag is set when user selects cell in treemap
+public bool tmap_isUpdated()
+{
+	return _updated;
+}
+
+// Make it possible for clients to clear internal data that can be retrieved
+public void tmap_clear()
+{
+	lastClassName = "";
+	_updated = true;
+}
+
 // Find the method set belonging to a specific class
-list[methodMetrics] FindMethodMetrics(set[classMetrics] cms, str classNameToFind)
+private list[methodMetrics] FindMethodMetrics(set[classMetrics] cms, str classNameToFind)
 {
 	list[methodMetrics] listOfClassMethodMetrics = [];	
 	
-	for(classMetrics <- cms)
+	for(classMetrics <- cms, classMetrics.className == classNameToFind)
 	{
-		if (classMetrics.className == classNameToFind)
-		{
-			listOfClassMethodMetrics = classMetrics.methods;
-			println(listOfClassMethodMetrics);
-		}
+		// To notify succesful selection was performed and which class + methods belong to this 
+		lastClassName = classNameToFind;
+		lastMethodMetrics = classMetrics.methods;	
+		_updated = true;
 	}
 	
-	return listOfClassMethodMetrics;
+	return lastMethodMetrics;
 }
 
+// Retrieve color belonging to a complexity grade of the class
 private str colorBasedOnGrade(int grade)
-{
-	_col = "green";
-	
-	// TODO: some proper values for complexity
-	if (grade==1)
-		_col = "red";
-	elseif (grade==2)
-		_col = "orange";
-	elseif (grade==3)
-		_col = "yellow";
-	elseif (grade==4)
-		_col = "blue";
-	
-	return _col;
+{	
+	map[int, str] colorMap = (1:"red", 2:"orange", 3:"yellow", 4:"blue", 5:"green");
+	return colorMap[grade];
 }
 
 // shows some extra info when hoovering over the class treemap
-public FProperty popupClassInfo(cls)
+private FProperty popupClassInfo(cls)
 {
 	popupText = text("<cls.className>\n
 Total Methods    = <cls.totalMethods>
@@ -58,10 +83,31 @@ Avg. Method Size = <cls.classSize / cls.totalMethods>\n", fontSize(9), fontBold(
 	return PopupBox(popupText,right());
 }
 
+// Displays a legend to lookup meaning of used colors
+private Figure LegendaLine()
+{
+	Figure title = text("Class complexity Rating",size(100,15),resizable(false));
+	
+	b1 = box(size(16,16),resizable(false),fillColor("red"));
+	b2 = box(size(16,16),resizable(false),fillColor("orange"));
+	b3 = box(size(16,16),resizable(false),fillColor("yellow"));
+	b4 = box(size(16,16),resizable(false),fillColor("blue"));
+	b5 = box(size(16,16),resizable(false),fillColor("green"));
+	
+	t1 = text("1-Star", fontSize(12), size(80,20), resizable(false));
+	t2 = text("2-Star", fontSize(12), size(80,20), resizable(false));
+	t3 = text("3-Star", fontSize(12), size(80,20), resizable(false));
+	t4 = text("4-Star", fontSize(12), size(80,20), resizable(false));
+	t5 = text("5-Star", fontSize(12), size(80,20), resizable(false));
+	
+	legendaLine = hcat([b5, t5, b4, t4, b3, t3, b2, t2, b1, t1], resizable(false));
+	return vcat([title, legendaLine],resizable(false));	
+}
+
 // Shows a treemap where each cell is based on metrics of one class
 // totalLOC is used to calculate percentage of total treemap area assigned to seperate class size
-public void ShowClassMetricsTreeMap(set[classMetrics] cm)
-{
+public Figure ShowClassMetricsTreeMap(set[classMetrics] cm)
+{	
 	Figures boxes = [];
 	
 	for(cls<-cm)	
@@ -78,12 +124,16 @@ public void ShowClassMetricsTreeMap(set[classMetrics] cm)
 		
 		boxes = boxes + box(area(areaSize), fillColor(colorBasedOnGrade(cls.complexityRate)), popupClassInfo(cls),
 		onMouseDown(bool (int butNr, map[KeyModifier,bool] modifiers) {				 
-				 println(FindMethodMetrics(cm, nameOfClass));
+				 FindMethodMetrics(cm, nameOfClass);
+				 println("<nameOfClass> selected");
 	             return true;
 	             }));
 	}
 	
-	t = treemap(boxes);
+	Figure title = text("Class Size & Complexity", fontSize(16), size(80,30), resizable(false));
+	t = treemap(boxes, shrink(0.9));
+	
+	Figure containingBox = box(vcat([title,t,LegendaLine()]), size(1200,200), resizable(false));
      
-   render(t);
+   	return containingBox;
 }

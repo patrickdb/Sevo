@@ -35,8 +35,8 @@ public bool isEmptyLine(str oneLine)
 
 public bool isScopeDelimiterLine(str oneLine)
 {
-	//return (oneLine=="}" || oneLine=="{" || oneLine=="};");
-	return (/\s*[{}][;]?/ := oneLine) ? true : false;	
+	return (oneLine=="}" || oneLine=="{" || oneLine=="};");
+	//return (/\s*[{}][;]?/ := oneLine) ? true : false;	
 }
 
 // This method will count the number of empty lines given by the unit defined in fileName
@@ -128,6 +128,9 @@ public int CalculateProjectLinesOfCode(set[JavaFileMetrics] projectInfo)
 public JavaFileMetrics DetermineMethodMetrics(JavaFileMetrics metrics, loc projectName)
 {
 	m3_model = createM3FromEclipseProject(projectName);
+	//println(metrics.fileName.extension);
+	
+	//m3_model = createM3FromEclipseFile(metrics.fileName);
 	
 	// Retrieves a set of 'method' . These methods can be directly used in other functions because they are returning loc type
 	rel[loc methodname, loc methodText] methodList = { <declarationName,src> | <declarationName,src> <- m3_model@declarations, isConstructor(declarationName) || isMethod(declarationName)};
@@ -140,8 +143,9 @@ public JavaFileMetrics DetermineMethodMetrics(JavaFileMetrics metrics, loc proje
 		int emptyLinesTotal   = countEmptyLinesInJavaUnit(meth.methodText);
 		int totalLines        = countTotalLinesInJavaUnit(meth.methodText);
 
-		//println("<meth.methodname.file>:<l> associated lines of comments");
-		//println("<meth.methodname.file>:has <p> empty lines");
+		//println("<meth.methodname>");
+//		println("<meth.methodname.file>:<commentLinesTotal> associated lines of comments");
+//		println("<meth.methodname.parent>:has <emptyLinesTotal> empty lines");
 
 		int nrOfPredicates = 0;
 		
@@ -165,7 +169,7 @@ public JavaFileMetrics DetermineMethodMetrics(JavaFileMetrics metrics, loc proje
 		MethodLinesOfCode = totalLines - emptyLinesTotal - commentLinesTotal;
 		cyclicComplexity = nrOfPredicates + 1;
 		
-		metrics.methods = metrics.methods + mm(meth.methodname, MethodLinesOfCode, cyclicComplexity);		
+		metrics.methods = metrics.methods + _mm(meth.methodname, MethodLinesOfCode, cyclicComplexity);
 	}		
 	
 	println("Max complexity encountered = <maxNrOfPredicates>");

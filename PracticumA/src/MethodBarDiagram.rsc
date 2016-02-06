@@ -10,24 +10,6 @@ import vis::KeySym;
 import List;
 import IO;
 
-public void DisplayMethodComplexityBars(set[classMetrics] clsInfo)
-{
-	barwidth = 16;	
-	
-	bars = [box([size(classData.classSize,barwidth), fillColor("red"), onMouseDown(bool (int butNr, map[KeyModifier,bool] modifiers) {
-				 println(classData.uri);
-	             return true;
-	             }),resizable(false),left(),top(),
-	             PopupBox(text("<classData.classSize> SLOC ; Complexity"), right())
-	            ]) | 
-				classData<-sort(clsInfo, bool(classMetrics a, classMetrics b){return a.classSize > b.classSize;})];
-	
-	// Make the bardiagram scrollable
-	scrollableDiagram = vscrollable(vcat(bars,resizable(false)),shrink(1.0));
-	
-	render(box(scrollableDiagram,size(500,200),resizable(false)));	
-}
-
 // Find largest method LOC and return the LOC of this method
 private int FindMaxSLOC(list[methodMetrics] listOfMethods)
 {
@@ -70,13 +52,37 @@ private list[methodMetrics] selectedSort(list[methodMetrics] listOfMethods, bool
 	return sortedMetrics;
 }
 
-public void DisplayMethodComplexityBars2(list[methodMetrics] listOfMethods)
+public Figure DisplayBarsLegend()
 {
-	maxBarWidth = 550;
+	Figure title = text("CyclicComplexity ",size(100,15),resizable(false));
+	
+	b4 = box(size(16,16),resizable(false),fillColor("red"));
+	b3 = box(size(16,16),resizable(false),fillColor("orange"));
+	b2 = box(size(16,16),resizable(false),fillColor("yellow"));	
+	b1 = box(size(16,16),resizable(false),fillColor("green"));
+	
+	t1 = text("<ccb["low"]>-<ccb["Medium"]>", fontSize(12), size(80,20), resizable(false));
+	t2 = text("<ccb["Medium"]>-<ccb["High"]>", fontSize(12), size(80,20), resizable(false));
+	t3 = text("<ccb["High"]>-<ccb["veryHigh"]>", fontSize(12), size(80,20), resizable(false));
+	t4 = text("<ccb["veryHigh"]>-...", fontSize(12), size(80,20), resizable(false));	
+	
+	legendaLine = hcat([b1, t1, b2, t2, b3, t3, b4, t4], resizable(false));
+	return hcat([title, legendaLine],resizable(false));
+}
+
+public Figure DisplayMethodComplexityBars(list[methodMetrics] listOfMethods, str className, bool sizeSorting)
+{
+	maxBarWidth = 750;
 	barHeight   = 16;	
 	
 	barWidthMul = maxBarWidth / FindMaxSLOC(listOfMethods);	
 
+	strSort = sizeSorting?"Size":"Complexity";
+	
+	Figure title = text("Method Size & Complexity", fontSize(16));
+	Figure sub1 = text("Class: <className>");
+	Figure sub2 = text("Sorted by: <strSort>");
+	
 	bars = [box([size(methodData.methodSLOC * barWidthMul, barHeight), fillColor(colorBasedOnComplexity(methodData.methodComplexity)),left(), 
 	             onMouseDown(bool (int butNr, map[KeyModifier,bool] modifiers) {
 				    println(methodData.methodName);
@@ -85,10 +91,14 @@ public void DisplayMethodComplexityBars2(list[methodMetrics] listOfMethods)
 	             resizable(false),left(),top(),
 	             PopupBox(text("<methodData.methodName.file> = <methodData.methodSLOC> SLOC ; Complexity: <methodData.methodComplexity>"), right())
 	            ]) | 
-				methodData<-selectedSort(listOfMethods, true)];
+				methodData<-selectedSort(listOfMethods, sizeSorting)];
+	
 	
 	// Make the bardiagram scrollable
-	scrollableDiagram = vscrollable(vcat(bars,resizable(false)),shrink(1.0));
+	scrollableDiagram = vscrollable(vcat(bars,resizable(false)),shrink(1.0),top());
+	plotbars = box(scrollableDiagram,size(800,550),resizable(false),top());
 	
-	render(box(scrollableDiagram,size(700,500),resizable(false)));	
+	header = vcat([title, sub1, sub2]);
+	combined = vcat([header, plotbars]);
+	return 	combined;
 }
